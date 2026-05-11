@@ -34,11 +34,27 @@ def send_email(to_email, subject, body):
         msg.attach(MIMEText(body, 'plain'))
         
         # Connect to SMTP server and send
-        server = smtplib.SMTP(current_app.config['MAIL_SERVER'], 
-                              current_app.config['MAIL_PORT'])
+        server = smtplib.SMTP(
+            current_app.config['MAIL_SERVER'],
+            current_app.config['MAIL_PORT'],
+            timeout=10
+        )
+
+        current_app.logger.info("SMTP connected")
+
+        server.ehlo()
         server.starttls()
+
+        current_app.logger.info("TLS started")
+
         server.login(username, password)
+
+        current_app.logger.info("SMTP login success")
+
         server.send_message(msg)
+
+        current_app.logger.info("Email sent")
+
         server.quit()
         
         return True
