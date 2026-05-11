@@ -1,13 +1,14 @@
 """
-Advanced Email Helper for AuthFlow
-----------------------------------
+Production Email Helper for AuthFlow
+------------------------------------
 Features:
-- Detailed SMTP debugging
-- TLS/SSL support
-- Safe connection handling
-- Better logging
-- Timeout protection
-- Render deployment debugging
+- Clean production structure
+- IPv4 forced connection support
+- TLS / SSL support
+- Detailed logging
+- Safe cleanup
+- Better timeout handling
+- Render deployment compatibility
 """
 
 import smtplib
@@ -21,23 +22,65 @@ from email.mime.multipart import MIMEMultipart
 from flask import current_app
 
 
+# =========================================================
+# FORCE IPV4
+# =========================================================
+
+_original_getaddrinfo = socket.getaddrinfo
+
+
+def force_ipv4_only():
+    """
+    Force Python SMTP to use IPv4 only.
+    Helps fix Render/Gmail networking issues.
+    """
+
+    def ipv4_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+        return _original_getaddrinfo(
+            host,
+            port,
+            socket.AF_INET,
+            type,
+            proto,
+            flags
+        )
+
+    socket.getaddrinfo = ipv4_getaddrinfo
+
+
+# =========================================================
+# MAIN EMAIL FUNCTION
+# =========================================================
+
 def send_email(to_email, subject, body):
-    """
-    Send email with advanced debugging and error handling.
-    """
 
     server = None
 
     try:
-        # =========================================================
+
+        # =====================================================
         # LOAD CONFIG
-        # =========================================================
+        # =====================================================
 
-        mail_server = current_app.config.get("MAIL_SERVER")
-        mail_port = int(current_app.config.get("MAIL_PORT", 587))
+        mail_server = current_app.config.get(
+            "MAIL_SERVER",
+            "smtp.gmail.com"
+        )
 
-        mail_username = current_app.config.get("MAIL_USERNAME")
-        mail_password = current_app.config.get("MAIL_PASSWORD")
+        mail_port = int(
+            current_app.config.get(
+                "MAIL_PORT",
+                587
+            )
+        )
+
+        mail_username = current_app.config.get(
+            "MAIL_USERNAME"
+        )
+
+        mail_password = current_app.config.get(
+            "MAIL_PASSWORD"
+        )
 
         mail_sender = current_app.config.get(
             "MAIL_DEFAULT_SENDER",
@@ -45,49 +88,95 @@ def send_email(to_email, subject, body):
         )
 
         mail_use_tls = str(
-            current_app.config.get("MAIL_USE_TLS", "true")
+            current_app.config.get(
+                "MAIL_USE_TLS",
+                "true"
+            )
         ).lower() == "true"
 
         mail_use_ssl = str(
-            current_app.config.get("MAIL_USE_SSL", "false")
+            current_app.config.get(
+                "MAIL_USE_SSL",
+                "false"
+            )
         ).lower() == "true"
 
-        # =========================================================
-        # CONFIG DEBUGGING
-        # =========================================================
+        # =====================================================
+        # DEBUG LOGGING
+        # =====================================================
 
         current_app.logger.info("=" * 60)
-        current_app.logger.info("STARTING EMAIL DELIVERY")
-        current_app.logger.info("TO: %s", to_email)
-        current_app.logger.info("SUBJECT: %s", subject)
+        current_app.logger.info("EMAIL DELIVERY STARTED")
+        current_app.logger.info(f"TO: {to_email}")
+        current_app.logger.info(f"SUBJECT: {subject}")
 
         current_app.logger.info("SMTP CONFIG:")
-        current_app.logger.info("MAIL_SERVER: %s", mail_server)
-        current_app.logger.info("MAIL_PORT: %s", mail_port)
-        current_app.logger.info("MAIL_USE_TLS: %s", mail_use_tls)
-        current_app.logger.info("MAIL_USE_SSL: %s", mail_use_ssl)
-        current_app.logger.info("MAIL_USERNAME EXISTS: %s", bool(mail_username))
-        current_app.logger.info("MAIL_PASSWORD EXISTS: %s", bool(mail_password))
+        current_app.logger.info(f"MAIL_SERVER: {mail_server}")
+        current_app.logger.info(f"MAIL_PORT: {mail_port}")
+        current_app.logger.info(f"MAIL_USE_TLS: {mail_use_tls}")
+        current_app.logger.info(f"MAIL_USE_SSL: {mail_use_ssl}")
+        current_app.logger.info(
+            f"MAIL_USERNAME EXISTS: {bool(mail_username)}"
+        )
+        current_app.logger.info(
+            f"MAIL_PASSWORD EXISTS: {bool(mail_password)}"
+        )
 
-        # =========================================================
+        # =====================================================
         # VALIDATION
-        # =========================================================
+        # =====================================================
 
         if not mail_username or not mail_password:
+
             current_app.logger.error(
                 "SMTP credentials missing."
             )
+
             return False
 
         if mail_use_tls and mail_use_ssl:
+
             current_app.logger.error(
                 "TLS and SSL cannot both be enabled."
             )
+
             return False
 
-        # =========================================================
-        # CREATE MESSAGE
-        # =========================================================
+        # =====================================================
+        # FORCE IPV4
+        # =====================================================
+
+        current_app.logger.info(
+            "Forcing IPv4 connection..."
+        )
+
+        force_ipv4_only()
+
+        # =====================================================
+        # DNS TEST
+        # =====================================================
+
+        try:
+
+            smtp_ip = socket.gethostbyname(mail_server)
+
+            current_app.logger.info(
+                f"{mail_server} resolved to {smtp_ip}"
+            )
+
+        except Exception as dns_error:
+
+            current_app.logger.error(
+                "DNS resolution failed."
+            )
+
+            current_app.logger.error(str(dns_error))
+
+            return False
+
+        # =====================================================
+        # CREATE EMAIL MESSAGE
+        # =====================================================
 
         msg = MIMEMultipart()
 
@@ -95,67 +184,86 @@ def send_email(to_email, subject, body):
         msg["To"] = to_email
         msg["Subject"] = subject
 
-        msg.attach(MIMEText(body, "plain"))
+        msg.attach(
+            MIMEText(body, "plain")
+        )
 
-        current_app.logger.info("Email message created successfully.")
+        current_app.logger.info(
+            "Email message created."
+        )
 
-        # =========================================================
+        # =====================================================
         # SMTP CONNECTION
-        # =========================================================
+        # =====================================================
 
         current_app.logger.info(
             "Connecting to SMTP server..."
         )
 
+        socket.setdefaulttimeout(20)
+
+        # =====================================================
         # SSL MODE
+        # =====================================================
+
         if mail_use_ssl:
 
             current_app.logger.info(
-                "Using SSL connection..."
+                "Using SMTP SSL mode..."
             )
 
-            context = ssl.create_default_context()
+            ssl_context = ssl.create_default_context()
 
             server = smtplib.SMTP_SSL(
-                mail_server,
-                mail_port,
+                host=mail_server,
+                port=mail_port,
                 timeout=20,
-                context=context
+                context=ssl_context
             )
 
-        # TLS / NORMAL MODE
+        # =====================================================
+        # STANDARD MODE
+        # =====================================================
+
         else:
 
             current_app.logger.info(
-                "Using standard SMTP connection..."
+                "Using SMTP standard mode..."
             )
 
             server = smtplib.SMTP(
-                mail_server,
-                mail_port,
+                host=mail_server,
+                port=mail_port,
                 timeout=20
             )
 
         current_app.logger.info(
-            "SMTP connection established."
+            "SMTP socket connected."
         )
 
-        # SHOW SMTP DEBUG OUTPUT
+        # =====================================================
+        # SMTP DEBUG
+        # =====================================================
+
         server.set_debuglevel(1)
 
-        # =========================================================
+        # =====================================================
         # EHLO
-        # =========================================================
+        # =====================================================
+
+        current_app.logger.info(
+            "Sending EHLO..."
+        )
 
         server.ehlo()
 
         current_app.logger.info(
-            "EHLO completed successfully."
+            "EHLO successful."
         )
 
-        # =========================================================
-        # START TLS
-        # =========================================================
+        # =====================================================
+        # STARTTLS
+        # =====================================================
 
         if mail_use_tls:
 
@@ -163,7 +271,11 @@ def send_email(to_email, subject, body):
                 "Starting TLS encryption..."
             )
 
-            server.starttls()
+            tls_context = ssl.create_default_context()
+
+            server.starttls(
+                context=tls_context
+            )
 
             server.ehlo()
 
@@ -171,12 +283,12 @@ def send_email(to_email, subject, body):
                 "TLS started successfully."
             )
 
-        # =========================================================
+        # =====================================================
         # LOGIN
-        # =========================================================
+        # =====================================================
 
         current_app.logger.info(
-            "Logging into SMTP server..."
+            "Logging into SMTP..."
         )
 
         server.login(
@@ -188,9 +300,9 @@ def send_email(to_email, subject, body):
             "SMTP login successful."
         )
 
-        # =========================================================
+        # =====================================================
         # SEND EMAIL
-        # =========================================================
+        # =====================================================
 
         current_app.logger.info(
             "Sending email..."
@@ -199,12 +311,12 @@ def send_email(to_email, subject, body):
         server.send_message(msg)
 
         current_app.logger.info(
-            "EMAIL SENT SUCCESSFULLY."
+            "EMAIL SENT SUCCESSFULLY"
         )
 
-        # =========================================================
+        # =====================================================
         # CLOSE CONNECTION
-        # =========================================================
+        # =====================================================
 
         server.quit()
 
@@ -216,9 +328,9 @@ def send_email(to_email, subject, body):
 
         return True
 
-    # =============================================================
+    # =========================================================
     # SMTP AUTH ERROR
-    # =============================================================
+    # =========================================================
 
     except smtplib.SMTPAuthenticationError as e:
 
@@ -236,9 +348,9 @@ def send_email(to_email, subject, body):
 
         return False
 
-    # =============================================================
-    # SMTP CONNECTION ERROR
-    # =============================================================
+    # =========================================================
+    # SMTP CONNECT ERROR
+    # =========================================================
 
     except smtplib.SMTPConnectError as e:
 
@@ -252,9 +364,9 @@ def send_email(to_email, subject, body):
 
         return False
 
-    # =============================================================
+    # =========================================================
     # NETWORK ERROR
-    # =============================================================
+    # =========================================================
 
     except socket.gaierror as e:
 
@@ -268,14 +380,14 @@ def send_email(to_email, subject, body):
 
         return False
 
-    # =============================================================
+    # =========================================================
     # TIMEOUT ERROR
-    # =============================================================
+    # =========================================================
 
     except socket.timeout as e:
 
         current_app.logger.error(
-            "SMTP CONNECTION TIMEOUT"
+            "SMTP TIMEOUT ERROR"
         )
 
         current_app.logger.error(str(e))
@@ -284,9 +396,9 @@ def send_email(to_email, subject, body):
 
         return False
 
-    # =============================================================
+    # =========================================================
     # GENERAL ERROR
-    # =============================================================
+    # =========================================================
 
     except Exception as e:
 
@@ -300,22 +412,26 @@ def send_email(to_email, subject, body):
 
         return False
 
-    # =============================================================
+    # =========================================================
     # CLEANUP
-    # =============================================================
+    # =========================================================
 
     finally:
 
         try:
+
             if server:
+
                 server.quit()
-        except:
+
+        except Exception:
+
             pass
 
 
-# ================================================================
+# =========================================================
 # OTP EMAIL
-# ================================================================
+# =========================================================
 
 def send_otp_email(email, otp):
 
@@ -330,7 +446,7 @@ Your verification code is:
 
 This code will expire in 5 minutes.
 
-If you did not request this code,
+If you did not request this verification code,
 please ignore this email.
 
 Best regards,
@@ -344,9 +460,9 @@ AuthFlow Team
     )
 
 
-# ================================================================
+# =========================================================
 # WELCOME EMAIL
-# ================================================================
+# =========================================================
 
 def send_welcome_email(email, username):
 
