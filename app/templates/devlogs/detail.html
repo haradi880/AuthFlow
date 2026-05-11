@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}DevLog by @{{ devlog.author.username }} - AuthFlow{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/devlogs.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    {% include 'components/sidebar.html' %}
+    <main class="main-content devfeed-shell">
+        <nav class="top-nav">
+            <div class="top-nav-title">
+                <button class="menu-toggle" type="button" aria-label="Open navigation">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+                    </svg>
+                </button>
+                <div>
+                    <p class="page-kicker">DevLog</p>
+                    <h1 class="page-title">@{{ devlog.author.username }}</h1>
+                </div>
+            </div>
+            <a href="{{ url_for('devlogs.index') }}" class="btn btn-secondary btn-sm">Back to DevFeed</a>
+        </nav>
+
+        <div class="devlog-detail-layout">
+            <section>
+                {% set state = viewer_state.get(devlog.id, {}) %}
+                {% include 'devlogs/_card.html' %}
+                <section class="devlog-comments-panel">
+                    <h2>Discussion</h2>
+                    <div id="detailComments">
+                        {% for comment in comments %}
+                            {% include 'devlogs/_comment.html' %}
+                        {% else %}
+                        <p class="devlog-muted">No comments yet.</p>
+                        {% endfor %}
+                    </div>
+                </section>
+            </section>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script src="{{ url_for('static', filename='js/devlogs.js') }}"></script>
+{% endblock %}

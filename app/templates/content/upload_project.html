@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit Project' if editing else 'Share Project' }} - AuthFlow{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/blog.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+{% endblock %}
+{% block content %}
+<div class="dashboard-container">
+    {% include 'components/sidebar.html' %}
+    <main class="main-content">
+        <nav class="top-nav">
+            <h1 class="page-title">{{ 'Edit Project' if editing else 'Share Project' }}</h1>
+            <a href="{{ url_for('project.projects_feed') }}" class="btn btn-sm" style="background: var(--bg-secondary); color: var(--text-secondary);">Cancel</a>
+        </nav>
+        <form method="POST" enctype="multipart/form-data" class="edit-profile-form">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <section class="form-section">
+                <h2 class="form-section-title">Project Details</h2>
+                <div class="form-grid">
+                    <div class="form-group form-grid-full">
+                        <label class="form-label" for="title">Title</label>
+                        <input class="form-input" id="title" name="title" value="{{ project.title if project else '' }}" required>
+                    </div>
+                    <div class="form-group form-grid-full">
+                        <label class="form-label" for="description">Description</label>
+                        <textarea class="form-input" id="description" name="description" required>{{ project.description if project else '' }}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="category_id">Category</label>
+                        <select class="form-input" id="category_id" name="category_id">
+                            <option value="">Uncategorized</option>
+                            {% for category in categories %}
+                            <option value="{{ category.id }}" {{ 'selected' if project and project.category_id == category.id }}>{{ category.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="status">Status</label>
+                        <select class="form-input" id="status" name="status">
+                            <option value="draft" {{ 'selected' if project and project.status == 'draft' }}>Draft</option>
+                            <option value="published" {{ 'selected' if project and project.status == 'published' }}>Published</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="github_url">GitHub URL</label>
+                        <input class="form-input" id="github_url" name="github_url" type="url" value="{{ project.github_url if project else '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="demo_url">Live Demo URL</label>
+                        <input class="form-input" id="demo_url" name="demo_url" type="url" value="{{ project.demo_url if project else '' }}">
+                    </div>
+                    <div class="form-group form-grid-full">
+                        <label class="form-label" for="tags">Tags</label>
+                        <input class="form-input" id="tags" name="tags" list="tagSuggestions" value="{{ project.tags|map(attribute='name')|join(', ') if project else '' }}" placeholder="python, flask, ai">
+                        <datalist id="tagSuggestions"></datalist>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="thumbnail">Thumbnail</label>
+                        <input class="form-input" id="thumbnail" name="thumbnail" type="file" accept="image/*">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="images">Gallery Images</label>
+                        <input class="form-input" id="images" name="images" type="file" accept="image/*" multiple>
+                    </div>
+                </div>
+            </section>
+            {% if editing and gallery %}
+            <section class="form-section">
+                <h2 class="form-section-title">Current Gallery</h2>
+                <div class="feed-grid">
+                    {% for image in gallery %}
+                    <article class="project-card">
+                        <div class="project-card-image"><img src="{{ image.filename|upload_url('projects') }}" alt="{{ image.caption or project.title }}" loading="lazy"></div>
+                        <div class="project-card-content">
+                            <form method="POST" action="{{ url_for('project.delete_project_image', image_id=image.id) }}">
+                                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                                <button class="btn btn-secondary btn-sm" type="submit">Remove Image</button>
+                            </form>
+                        </div>
+                    </article>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+            <button type="submit" class="btn btn-primary">{{ 'Save Changes' if editing else 'Create Project' }}</button>
+        </form>
+    </main>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const tagInput = document.getElementById('tags');
+        const datalist = document.getElementById('tagSuggestions');
+        if (!tagInput || !datalist) return;
+        tagInput.addEventListener('input', async () => {
+            const current = tagInput.value.split(',').pop().trim();
+            const response = await fetch(`/tags/suggest?q=${encodeURIComponent(current)}`);
+            const tags = await response.json();
+            datalist.innerHTML = tags.map(tag => `<option value="${tag.name}"></option>`).join('');
+        });
+    });
+</script>
+{% endblock %}

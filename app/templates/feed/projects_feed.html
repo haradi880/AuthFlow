@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Projects - AuthFlow{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/feed.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/blog.css') }}">
+{% endblock %}
+{% block content %}
+<div class="dashboard-container">
+    {% include 'components/sidebar.html' %}
+    <main class="main-content">
+        <nav class="top-nav">
+            <div>
+                <button class="menu-toggle" type="button" aria-label="Open navigation">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </button>
+                <h1 class="page-title" style="display: inline; margin-left: 1rem;">Explore Projects</h1>
+            </div>
+            {% if current_user.is_authenticated %}<a href="{{ url_for('project.create_project') }}" class="btn btn-primary btn-sm">Share Project</a>{% endif %}
+        </nav>
+
+        <form class="feed-filters" method="GET" style="display: flex; gap: var(--spacing-md); margin-bottom: var(--spacing-xl); flex-wrap: wrap;">
+            <select name="sort" class="form-input" style="width: auto; min-width: 150px;" onchange="this.form.submit()">
+                <option value="latest" {{ 'selected' if request.args.get('sort', 'latest') == 'latest' }}>Latest</option>
+                <option value="stars" {{ 'selected' if request.args.get('sort') == 'stars' }}>Most Starred</option>
+                <option value="trending" {{ 'selected' if request.args.get('sort') == 'trending' }}>Trending</option>
+            </select>
+            <select name="category" class="form-input" style="width: auto; min-width: 180px;" onchange="this.form.submit()">
+                <option value="">All Categories</option>
+                {% for category in categories %}
+                <option value="{{ category.slug }}" {{ 'selected' if request.args.get('category') == category.slug }}>{{ category.name }}</option>
+                {% endfor %}
+            </select>
+        </form>
+
+        <div style="display: flex; gap: var(--spacing-sm); margin-bottom: var(--spacing-xl); flex-wrap: wrap;">
+            <span style="color: var(--text-muted); font-size: 0.875rem; font-weight: 600;">Tags:</span>
+            {% for tag in trending_tags %}
+            <a href="{{ url_for('project.projects_feed', tag=tag.slug) }}" class="blog-tag">#{{ tag.name }}</a>
+            {% else %}
+            <span style="color: var(--text-muted);">No tags yet</span>
+            {% endfor %}
+        </div>
+
+        <div class="feed-grid">
+            {% for project in projects %}
+            <article class="project-card hover-lift" onclick="window.location.href='{{ url_for('project.project_detail', slug=project.slug) }}'">
+                {% if project.thumbnail %}<div class="project-card-image"><img src="{{ project.thumbnail|upload_url('projects') }}" alt="{{ project.title }}" loading="lazy"></div>{% endif %}
+                <div class="project-card-content">
+                    <h3 class="project-card-title">{{ project.title }}</h3>
+                    <p class="project-card-excerpt">{{ project.description[:160] }}</p>
+                    <div class="project-tech-stack">{% for tag in project.tags %}<span class="skill-tag">{{ tag.name }}</span>{% endfor %}</div>
+                    <div class="project-card-links">
+                        {% if project.github_url %}<a href="{{ project.github_url }}" target="_blank" rel="noopener" class="btn btn-sm" style="background: var(--bg-tertiary); color: var(--text-secondary);" onclick="event.stopPropagation();">GitHub</a>{% endif %}
+                        {% if project.demo_url %}<a href="{{ project.demo_url }}" target="_blank" rel="noopener" class="btn btn-primary btn-sm" onclick="event.stopPropagation();">Live Demo</a>{% endif %}
+                    </div>
+                </div>
+            </article>
+            {% else %}
+            <section class="content-card"><p style="color: var(--text-muted);">No projects have been published yet.</p></section>
+            {% endfor %}
+        </div>
+    </main>
+</div>
+{% endblock %}
+{% block extra_js %}<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>{% endblock %}

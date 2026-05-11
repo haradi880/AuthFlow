@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}DevFeed - AuthFlow{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/feed.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/devlogs.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    {% include 'components/sidebar.html' %}
+    <main class="main-content devfeed-shell">
+        <nav class="top-nav">
+            <div class="top-nav-title">
+                <button class="menu-toggle" type="button" aria-label="Open navigation">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+                    </svg>
+                </button>
+                <div>
+                    <p class="page-kicker">Live developer network</p>
+                    <h1 class="page-title">DevFeed</h1>
+                </div>
+            </div>
+            <div class="top-nav-actions">
+                <a href="{{ url_for('blog.create_blog') }}" class="btn btn-secondary btn-sm">Write Blog</a>
+                <a href="{{ url_for('project.create_project') }}" class="btn btn-secondary btn-sm">Ship Project</a>
+            </div>
+        </nav>
+
+        <section class="devfeed-hero">
+            <div>
+                <span class="hero-eyebrow">Build in public</span>
+                <h2>Daily progress, shipped ideas, maker signals, and developer momentum.</h2>
+                <p>Share the small wins that compound: what changed, what shipped, what is blocked, and what the community can help with.</p>
+            </div>
+            <div class="devfeed-hero-stats">
+                <div><strong>{{ devlogs|length }}</strong><span>fresh logs</span></div>
+                <div><strong>{{ top_creators|length }}</strong><span>active creators</span></div>
+            </div>
+        </section>
+
+        <div class="devfeed-layout">
+            <section class="devfeed-main">
+                {% if current_user.is_authenticated %}
+                <form class="devlog-composer" id="devlogComposer" enctype="multipart/form-data">
+                    <div class="composer-author">
+                        <span class="devlog-avatar">{{ current_user.username[0] | upper }}</span>
+                        <div>
+                            <strong>Post a DevLog</strong>
+                            <p>Keep it concrete: progress, blockers, proof, next step.</p>
+                        </div>
+                    </div>
+                    <textarea name="content" maxlength="1200" required placeholder="Day 14: finished the auth backend, cleaned up OTP verification, now wiring realtime messaging. #flask #buildinpublic"></textarea>
+                    <div class="composer-grid">
+                        <label>
+                            <span>Progress</span>
+                            <input type="range" name="progress" min="0" max="100" value="25" data-progress-input>
+                            <strong data-progress-value>25%</strong>
+                        </label>
+                        <label>
+                            <span>Milestone</span>
+                            <input class="form-input" name="milestone" maxlength="160" placeholder="Reached private beta">
+                        </label>
+                    </div>
+                    <div class="composer-grid">
+                        <label>
+                            <span>Hashtags</span>
+                            <input class="form-input" name="hashtags" placeholder="flask, ai, robotics">
+                        </label>
+                        <label>
+                            <span>Media</span>
+                            <input class="form-input" type="file" name="media" accept="image/*,video/mp4,video/webm,video/quicktime" multiple>
+                        </label>
+                    </div>
+                    <div class="composer-footer">
+                        <span id="devlogComposerStatus">Daily DevLog can earn XP once per day.</span>
+                        <button type="submit" class="btn btn-primary">Post DevLog</button>
+                    </div>
+                </form>
+                {% else %}
+                <div class="devlog-composer signed-out-composer">
+                    <h2>Join the build feed</h2>
+                    <p>Create an account to post DevLogs, like, repost, comment, bookmark, and grow your developer streak.</p>
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Create Account</a>
+                </div>
+                {% endif %}
+
+                <div class="devfeed-tabs">
+                    <a class="{{ 'active' if sort == 'latest' }}" href="{{ url_for('devlogs.index', sort='latest') }}">Latest</a>
+                    <a class="{{ 'active' if sort == 'trending' }}" href="{{ url_for('devlogs.index', sort='trending') }}">Trending</a>
+                    <a class="{{ 'active' if sort == 'following' }}" href="{{ url_for('devlogs.index', sort='following') }}">Following</a>
+                    <a class="{{ 'active' if sort == 'milestones' }}" href="{{ url_for('devlogs.index', sort='milestones') }}">Milestones</a>
+                </div>
+
+                <div id="devlogFeed" class="devlog-feed">
+                    {% for devlog in devlogs %}
+                        {% set state = viewer_state.get(devlog.id, {}) %}
+                        {% include 'devlogs/_card.html' %}
+                    {% else %}
+                    <div class="devlog-empty">
+                        <h2>No DevLogs yet</h2>
+                        <p>Post the first build update and set the pace for the community.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {% if pagination.has_next %}
+                <button type="button" class="load-more-devlogs" id="loadMoreDevlogs" data-next-page="{{ pagination.next_num }}" data-sort="{{ sort }}">Load more</button>
+                {% endif %}
+            </section>
+
+            <aside class="devfeed-rail">
+                <section class="rail-panel">
+                    <h3>Trending Tags</h3>
+                    <div class="rail-tags">
+                        {% for tag in trending_tags %}
+                        <a href="{{ url_for('devlogs.index') }}?tag={{ tag.slug }}">#{{ tag.name }}</a>
+                        {% else %}
+                        <span>No tags yet</span>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <section class="rail-panel">
+                    <h3>Top Creators</h3>
+                    <div class="rail-list">
+                        {% for user in top_creators %}
+                        <a href="{{ url_for('main.public_profile', username=user.username) }}">
+                            <span class="devlog-avatar small">{{ user.username[0] | upper }}</span>
+                            <span><strong>{{ user.full_name or user.username }}</strong><small>{{ user.xp_total or 0 }} XP</small></span>
+                        </a>
+                        {% else %}
+                        <p>No creators yet.</p>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <section class="rail-panel">
+                    <h3>Hot Projects</h3>
+                    <div class="rail-list compact">
+                        {% for project in top_projects %}
+                        <a href="{{ url_for('project.project_detail', slug=project.slug) }}"><strong>{{ project.title }}</strong><small>{{ project.stars_count }} stars</small></a>
+                        {% else %}
+                        <p>No projects yet.</p>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <section class="rail-panel">
+                    <h3>Sharp Reads</h3>
+                    <div class="rail-list compact">
+                        {% for blog in top_blogs %}
+                        <a href="{{ url_for('blog.blog_detail', slug=blog.slug) }}"><strong>{{ blog.title }}</strong><small>{{ blog.likes_count }} likes</small></a>
+                        {% else %}
+                        <p>No blogs yet.</p>
+                        {% endfor %}
+                    </div>
+                </section>
+            </aside>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script src="{{ url_for('static', filename='js/devlogs.js') }}"></script>
+{% endblock %}

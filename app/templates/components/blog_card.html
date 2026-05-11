@@ -1,0 +1,25 @@
+<article class="blog-card hover-lift" onclick="window.location.href='{{ url_for('blog.blog_detail', slug=blog.slug) }}'">
+    {% if blog.thumbnail %}
+    <div class="blog-card-image">
+        <img src="{{ blog.thumbnail|upload_url('blogs') }}" alt="{{ blog.title }}" loading="lazy">
+    </div>
+    {% endif %}
+    <div class="blog-card-content">
+        <div class="blog-card-meta">
+            {% if blog.category %}<span class="blog-category">{{ blog.category.name }}</span>{% endif %}
+            <span class="blog-reading-time">{{ blog.reading_time }} min read</span>
+        </div>
+        <h3 class="blog-card-title">{{ blog.title }}</h3>
+        <p class="blog-card-excerpt">{{ blog.excerpt or blog.content[:160] }}</p>
+        <div class="blog-card-footer">
+            <div style="display: flex; align-items: center; gap: var(--spacing-sm);">
+                <div class="blog-card-avatar">{{ blog.author.username[0] | upper }}</div>
+                <span class="blog-card-author">{{ blog.author.username }}</span>
+            </div>
+            <div class="blog-card-stats">
+                <span>{{ blog.likes_count }} likes</span>
+                <span>{{ blog.comments_count }} comments</span>
+            </div>
+        </div>
+    </div>
+</article>

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Settings - AuthFlow{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+{% endblock %}
+{% block content %}
+<div class="dashboard-container">
+    {% include 'components/sidebar.html' %}
+    <main class="main-content">
+        <nav class="top-nav">
+            <div>
+                <p class="page-kicker">Account Control</p>
+                <h1 class="page-title">Settings</h1>
+            </div>
+            <a href="{{ url_for('main.edit_profile') }}" class="btn btn-primary btn-sm">Edit Profile</a>
+        </nav>
+
+        <section class="content-card">
+            <div class="card-header"><h2 class="card-title">Privacy & Notifications</h2></div>
+            <form method="POST" action="{{ url_for('main.update_preferences') }}">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <div class="form-grid">
+                    <label class="settings-toggle"><input type="checkbox" name="email_on_messages" {{ 'checked' if user.email_on_messages else '' }}> Email me on messages</label>
+                    <label class="settings-toggle"><input type="checkbox" name="email_on_comments" {{ 'checked' if user.email_on_comments else '' }}> Email me on comments</label>
+                    <label class="settings-toggle"><input type="checkbox" name="email_on_follows" {{ 'checked' if user.email_on_follows else '' }}> Email me on follows</label>
+                    <label class="settings-toggle"><input type="checkbox" name="email_on_likes" {{ 'checked' if user.email_on_likes else '' }}> Email me on likes</label>
+                    <label class="settings-toggle"><input type="checkbox" name="weekly_digest" {{ 'checked' if user.weekly_digest else '' }}> Weekly digest</label>
+                    <div class="form-group">
+                        <label class="form-label">Who can message me?</label>
+                        <select class="form-input" name="message_permission">
+                            <option value="everyone" {{ 'selected' if user.message_permission == 'everyone' else '' }}>Everyone</option>
+                            <option value="followers" {{ 'selected' if user.message_permission == 'followers' else '' }}>Followers only</option>
+                            <option value="none" {{ 'selected' if user.message_permission == 'none' else '' }}>No one</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn btn-primary" type="submit">Save Preferences</button>
+            </form>
+        </section>
+
+        <section class="content-card">
+            <div class="card-header"><h2 class="card-title">Security</h2></div>
+            <form method="POST" action="{{ url_for('main.change_password') }}" class="settings-stack">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input class="form-input" type="password" name="current_password" placeholder="Current password" required>
+                <input class="form-input" type="password" name="new_password" placeholder="New strong password" required>
+                <button class="btn btn-primary" type="submit">Change Password</button>
+            </form>
+            <form method="POST" action="{{ url_for('main.logout_all_devices') }}" style="margin-top: var(--spacing-lg);">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-secondary" type="submit">Log Out This Browser</button>
+            </form>
+        </section>
+
+        <section class="content-card">
+            <div class="card-header"><h2 class="card-title">Email</h2></div>
+            <p style="color: var(--text-secondary); margin-bottom: var(--spacing-md);">{{ user.email }} · {{ 'Verified' if user.is_verified else 'Not verified' }}</p>
+            <form method="POST" action="{{ url_for('main.start_email_change') }}" class="settings-stack">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input class="form-input" type="email" name="new_email" placeholder="New email address" required>
+                <button class="btn btn-secondary" type="submit">Send Verification Code</button>
+            </form>
+            {% if user.pending_email %}
+            <form method="POST" action="{{ url_for('main.verify_email_change') }}" class="settings-stack" style="margin-top: var(--spacing-md);">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input class="form-input" name="otp" placeholder="Code sent to {{ user.pending_email }}" required>
+                <button class="btn btn-primary" type="submit">Verify Email Change</button>
+            </form>
+            {% endif %}
+        </section>
+
+        <section class="content-card">
+            <div class="card-header"><h2 class="card-title">Data & Account</h2></div>
+            <div class="settings-nav">
+                <a href="{{ url_for('main.privacy') }}" class="settings-nav-item" style="text-decoration: none; color: inherit;">
+                    <div class="settings-nav-left"><div class="settings-nav-icon">P</div><div class="settings-nav-text"><h4>Privacy Policy</h4><p>How sessions, uploads, messages, and emails are handled.</p></div></div>
+                    <span style="color: var(--text-muted);">Open</span>
+                </a>
+                <a href="{{ url_for('main.terms') }}" class="settings-nav-item" style="text-decoration: none; color: inherit;">
+                    <div class="settings-nav-left"><div class="settings-nav-icon">T</div><div class="settings-nav-text"><h4>Terms</h4><p>Community and platform expectations.</p></div></div>
+                    <span style="color: var(--text-muted);">Open</span>
+                </a>
+                <div class="settings-nav-item">
+                    <div class="settings-nav-left"><div class="settings-nav-icon">D</div><div class="settings-nav-text"><h4>Export/Delete Account</h4><p>Planned: self-service export and deletion workflow.</p></div></div>
+                    <a href="{{ url_for('main.export_account_data') }}" class="btn btn-secondary btn-sm">Export JSON</a>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+{% endblock %}

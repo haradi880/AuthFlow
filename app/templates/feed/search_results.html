@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Search - AuthFlow{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/feed.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/blog.css') }}">
+{% endblock %}
+{% block content %}
+<div class="dashboard-container">
+    {% include 'components/sidebar.html' %}
+    <main class="main-content">
+        <nav class="top-nav"><h1 class="page-title">Search</h1></nav>
+        <form method="GET" class="content-card">
+            <div class="search-box" style="width: 100%;">
+                <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input class="search-input" name="q" value="{{ query }}" placeholder="Search blogs, projects, and creators">
+            </div>
+        </form>
+        <header class="search-results-header">
+            <p class="search-query">Results for <strong>{{ query or 'everything' }}</strong></p>
+            <p class="search-results-count">{{ total_results }} result{{ '' if total_results == 1 else 's' }}</p>
+        </header>
+        <section class="content-card">
+            <h2 class="card-title" style="margin-bottom: var(--spacing-lg);">Blogs</h2>
+            <div class="feed-grid">{% for blog in blogs %}{% include 'components/blog_card.html' %}{% else %}<p style="color: var(--text-muted);">No blogs found.</p>{% endfor %}</div>
+        </section>
+        <section class="content-card">
+            <h2 class="card-title" style="margin-bottom: var(--spacing-lg);">Projects</h2>
+            <div class="feed-grid">
+                {% for project in projects %}
+                <article class="project-card" onclick="window.location.href='{{ url_for('project.project_detail', slug=project.slug) }}'">
+                    <div class="project-card-content"><h3 class="project-card-title">{{ project.title }}</h3><p class="project-card-excerpt">{{ project.description[:140] }}</p></div>
+                </article>
+                {% else %}<p style="color: var(--text-muted);">No projects found.</p>{% endfor %}
+            </div>
+        </section>
+        <section class="content-card">
+            <h2 class="card-title" style="margin-bottom: var(--spacing-lg);">Creators</h2>
+            {% for user in users %}
+            <a href="{{ url_for('main.public_profile', username=user.username) }}" class="settings-nav-item" style="text-decoration: none; color: inherit;">
+                <div class="settings-nav-left"><div class="user-avatar">{{ user.username[0]|upper }}</div><div class="settings-nav-text"><h4>{{ user.full_name or user.username }}</h4><p>@{{ user.username }}</p></div></div>
+            </a>
+            {% else %}<p style="color: var(--text-muted);">No creators found.</p>{% endfor %}
+        </section>
+    </main>
+</div>
+{% endblock %}

@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+{% block title %}Chat with @{{ other_user.username }} - AuthFlow{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+<style>
+    .chat-container {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 160px);
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        overflow: hidden;
+    }
+    .chat-header {
+        padding: var(--spacing-md) var(--spacing-lg);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+        background: var(--bg-tertiary);
+    }
+    .chat-messages {
+        flex: 1;
+        padding: var(--spacing-lg);
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-md);
+        background: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1h1v1H1V1z' fill='%23ffffff05' /%3E%3C/svg%3E");
+    }
+    .message {
+        max-width: 70%;
+        padding: var(--spacing-sm) var(--spacing-md);
+        border-radius: var(--radius-lg);
+        font-size: 0.9375rem;
+        position: relative;
+        animation: fadeIn 0.3s ease;
+    }
+    .message-sent {
+        align-self: flex-end;
+        background: var(--gradient-primary);
+        color: white;
+        border-bottom-right-radius: 4px;
+    }
+    .message-received {
+        align-self: flex-start;
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+        border: 1px solid var(--border);
+        border-bottom-left-radius: 4px;
+    }
+    .message-time {
+        font-size: 0.7rem;
+        opacity: 0.7;
+        margin-top: 4px;
+        display: block;
+        text-align: right;
+    }
+    .chat-input-area {
+        padding: var(--spacing-md) var(--spacing-lg);
+        border-top: 1px solid var(--border);
+        background: var(--bg-tertiary);
+    }
+    .chat-form {
+        display: flex;
+        gap: var(--spacing-md);
+    }
+    .chat-input {
+        flex: 1;
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-full);
+        padding: 0.75rem 1.25rem;
+        color: var(--text-primary);
+        outline: none;
+        transition: all 0.2s;
+    }
+    .chat-input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 2px var(--primary-light);
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    {% include 'components/sidebar.html' %}
+    <main class="main-content">
+        <nav class="top-nav">
+            <div style="display: flex; align-items: center; gap: var(--spacing-md);">
+                <button class="menu-toggle" type="button" aria-label="Open navigation">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"/>
+                        <line x1="3" y1="6" x2="21" y2="6"/>
+                        <line x1="3" y1="18" x2="21" y2="18"/>
+                    </svg>
+                </button>
+                <div class="breadcrumb" style="margin-bottom: 0;">
+                    <a href="{{ url_for('messages.inbox') }}" class="muted-link">Messages</a>
+                    <span class="separator">/</span>
+                    <span class="current">@{{ other_user.username }}</span>
+                </div>
+            </div>
+        </nav>
+
+        <div class="chat-container">
+            <div class="chat-header">
+                <div class="user-avatar" style="width: 40px; height: 40px;">
+                    {{ other_user.username[0]|upper }}
+                </div>
+                <div>
+                    <div style="font-weight: 600;">{{ other_user.full_name or other_user.username }}</div>
+                    <div style="font-size: 0.75rem; color: var(--success);">Online</div>
+                </div>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                {% for msg in messages %}
+                <div class="message {{ 'message-sent' if msg.sender_id == current_user.id else 'message-received' }}">
+                    <div class="message-content">{{ msg.content }}</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                        <time class="message-time js-local-time" datetime="{{ msg.created_at.isoformat() }}Z" data-format="time">{{ msg.created_at.strftime('%H:%M') }}</time>
+                        {% if msg.sender_id == current_user.id %}
+                        <span class="message-status" style="font-size: 0.7rem; margin-left: 8px;">
+                            {% if msg.is_read %}
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                <polyline points="20 6 9 17 4 12"/>
+                                <polyline points="20 11 12 19 8 15" style="margin-left: -6px;"/>
+                            </svg> Seen
+                            {% else %}
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="20 6 9 17 4 12"/>
+                            </svg> Sent
+                            {% endif %}
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="chat-input-area">
+                <form class="chat-form" id="chatForm">
+                    <input type="hidden" name="recipient_id" value="{{ other_user.id }}">
+                    <input type="text" class="chat-input" name="content" placeholder="Type a message..." autocomplete="off" required>
+                    <button type="submit" class="btn btn-primary btn-sm" style="border-radius: var(--radius-full); width: 40px; height: 40px; padding: 0;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="22" y1="2" x2="11" y2="13"/>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const chatMessages = document.getElementById('chatMessages');
+    const chatForm = document.getElementById('chatForm');
+    let lastMessageId = {% if messages %}{{ messages[-1].id }}{% else %}0{% endif %};
+    
+    // Scroll to bottom
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    
+    chatForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const input = chatForm.querySelector('.chat-input');
+        const content = input.value.trim();
+        if (!content) return;
+        
+        const tempId = 'temp-' + Date.now();
+        const formData = new FormData(chatForm);
+        input.value = '';
+        
+        // Optimistic UI - Add message immediately
+        appendMessage({
+            id: tempId,
+            content: content,
+            created_at: new Date().toISOString(),
+            status: 'sending'
+        }, true);
+        
+        try {
+            const response = await fetch("{{ url_for('messages.send_message') }}", {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                // Replace temp message status
+                const tempMsg = document.querySelector(`[data-id="${tempId}"]`);
+                if (tempMsg) {
+                    tempMsg.querySelector('.message-status').innerHTML = `
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"/>
+                        </svg> Sent
+                    `;
+                    tempMsg.setAttribute('data-id', data.message.id);
+                    lastMessageId = Math.max(lastMessageId, data.message.id);
+                }
+            }
+        } catch (error) {
+            console.error('Error sending message:', error);
+            const tempMsg = document.querySelector(`[data-id="${tempId}"]`);
+            if (tempMsg) tempMsg.style.opacity = '0.5';
+        }
+    });
+    
+    function escapeHtml(value) {
+        const div = document.createElement('div');
+        div.textContent = value || '';
+        return div.innerHTML;
+    }
+
+    function appendMessage(msg, isSent) {
+        const div = document.createElement('div');
+        div.className = `message ${isSent ? 'message-sent' : 'message-received'}`;
+        div.setAttribute('data-id', msg.id);
+        
+        let statusHtml = '';
+        if (isSent) {
+            statusHtml = `
+                <span class="message-status" style="font-size: 0.7rem; margin-left: 8px;">
+                    ${msg.status === 'sending' ? 'Sending...' : (msg.is_read ? 'Seen' : 'Sent')}
+                </span>
+            `;
+        }
+
+        div.innerHTML = `
+            <div class="message-content">${escapeHtml(msg.content)}</div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                <time class="message-time js-local-time" datetime="${escapeHtml(msg.created_at)}" data-format="time">${formatMessageTime(msg.created_at)}</time>
+                ${statusHtml}
+            </div>
+        `;
+        chatMessages.appendChild(div);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // Polling for new messages
+    async function checkNewMessages() {
+        try {
+            const cacheBuster = Date.now();
+            const response = await fetch(`{{ url_for('messages.chat', username=other_user.username) }}?last_id=${lastMessageId}&ajax=1&_=${cacheBuster}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                if (data.messages && data.messages.length > 0) {
+                    console.log(`Received ${data.messages.length} new messages`);
+                    let shouldPlaySound = false;
+                    data.messages.forEach(msg => {
+                        // Check if message is already in DOM to avoid duplicates
+                        if (!document.querySelector(`[data-id="${msg.id}"]`)) {
+                            if (msg.sender_id != {{ current_user.id }}) {
+                                appendMessage({
+                                    id: msg.id,
+                                    content: msg.content,
+                                    created_at: msg.created_at
+                                }, false);
+                                shouldPlaySound = true;
+                            }
+                        }
+                        lastMessageId = Math.max(lastMessageId, msg.id);
+                    });
+                    if (shouldPlaySound && typeof playNotificationSound === 'function') {
+                        playNotificationSound();
+                    }
+                }
+            }
+        } catch (e) { console.error("Polling error:", e); }
+    }
+
+    function formatMessageTime(value) {
+        if (window.AuthFlow && typeof window.AuthFlow.formatLocalTime === 'function') {
+            return window.AuthFlow.formatLocalTime(value, 'time');
+        }
+        return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    let messagePollDelay = 1500;
+    setInterval(() => {
+        if (document.visibilityState === 'visible') checkNewMessages();
+    }, messagePollDelay);
+</script>
+{% endblock %}

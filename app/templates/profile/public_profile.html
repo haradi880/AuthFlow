@@ -1,0 +1,412 @@
+{% extends "base.html" %}
+{% block title %}{{ profile.username }} - AuthFlow{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/feed.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    {% include 'components/sidebar.html' %}
+    <main class="main-content">
+        <nav class="top-nav">
+            <div style="display: flex; align-items: center; gap: var(--spacing-md);">
+                <button class="menu-toggle" type="button" aria-label="Open navigation">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"/>
+                        <line x1="3" y1="6" x2="21" y2="6"/>
+                        <line x1="3" y1="18" x2="21" y2="18"/>
+                    </svg>
+                </button>
+                <div class="breadcrumb" style="margin-bottom: 0;">
+                    <a href="/" class="muted-link">Home</a>
+                    <span class="separator">/</span>
+                    <span class="current">@{{ profile.username }}</span>
+                </div>
+            </div>
+            <div class="top-nav-actions">
+                {% if session.get('user') == profile.username %}
+                <a href="/profile/edit" class="btn btn-primary btn-sm">Edit Profile</a>
+                {% endif %}
+            </div>
+        </nav>
+
+        <!-- SEO Meta Tags -->
+        {% block meta %}
+        <meta name="description" content="{{ profile.bio }}">
+        <meta property="og:title" content="{{ profile.username }}'s Profile">
+        <meta property="og:description" content="{{ profile.bio }}">
+        <meta property="og:type" content="profile">
+        <meta property="profile:username" content="{{ profile.username }}">
+        <link rel="canonical" href="{{ request.url }}">
+        <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "ProfilePage",
+            "name": "{{ profile.username }}",
+            "description": "{{ profile.bio }}",
+            "mainEntity": {
+                "@type": "Person",
+                "name": "{{ profile.username }}",
+                "description": "{{ profile.bio }}",
+                "url": "{{ profile.website }}"
+            }
+        }
+        </script>
+        {% endblock %}
+
+        <!-- Profile Banner -->
+        <div class="profile-banner" {% if profile.banner_url %}style="background-image: linear-gradient(180deg, rgba(11,15,25,.12), rgba(11,15,25,.82)), url('{{ profile.banner_url }}');"{% endif %}>
+            <div class="profile-banner-overlay"></div>
+        </div>
+
+        <!-- Profile Header -->
+        <div class="profile-header">
+            <div class="profile-avatar-wrapper">
+                <img src="{{ profile.avatar_url }}" alt="{{ profile.username }}" class="profile-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div style="display: none; width: 160px; height: 160px; border-radius: 50%; border: 4px solid var(--bg-primary); background: var(--gradient-primary); align-items: center; justify-content: center; font-size: 4rem; font-weight: 700; color: white; box-shadow: var(--shadow-lg);">
+                    {{ profile.username[0] | upper }}
+                </div>
+            </div>
+
+            <div class="profile-info">
+                <h1 class="profile-name">{{ profile.full_name or profile.username }}</h1>
+                <p class="profile-username">@{{ profile.username }}{% if profile.is_verified %} <span class="verified-badge">Verified</span>{% endif %}</p>
+                {% if profile.headline %}
+                <p class="profile-headline">{{ profile.headline }}</p>
+                {% endif %}
+                <p class="profile-bio">{{ profile.bio or "No bio yet." }}</p>
+                
+                <div class="profile-meta">
+                    {% if profile.location %}
+                    <span class="profile-meta-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                            <circle cx="12" cy="10" r="3"/>
+                        </svg>
+                        {{ profile.location }}
+                    </span>
+                    {% endif %}
+                    
+                    {% if profile.website %}
+                    <a href="{{ profile.website }}" target="_blank" rel="noopener" class="profile-meta-item" style="text-decoration: none;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="2" y1="12" x2="22" y2="12"/>
+                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                        </svg>
+                        {{ profile.website | replace('https://', '') }}
+                    </a>
+                    {% endif %}
+                    
+                    {% if profile.resume_url %}
+                    <a href="{{ profile.resume_url }}" target="_blank" rel="noopener" class="profile-meta-item" style="text-decoration: none;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                        </svg>
+                        Resume
+                    </a>
+                    {% endif %}
+                    
+                    <span class="profile-meta-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                            <line x1="16" y1="2" x2="16" y2="6"/>
+                            <line x1="8" y1="2" x2="8" y2="6"/>
+                            <line x1="3" y1="10" x2="21" y2="10"/>
+                        </svg>
+                        Joined {{ profile.joined_date }}
+                    </span>
+                </div>
+
+                <div class="profile-skills">
+                    {% for skill in profile.skills %}
+                    <span class="skill-tag">{{ skill }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="profile-actions">
+                {% if session.get('user') and session['user'] != profile.username %}
+                    <button class="btn btn-sm follow-btn {{ 'following' if is_following else 'btn-primary' }}" 
+                            data-username="{{ profile.username }}"
+                            style="{{ 'background: var(--bg-tertiary); color: var(--text-secondary);' if is_following else '' }}">
+                        {% if is_following %}
+                            Following
+                        {% else %}
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                <circle cx="8.5" cy="7" r="4"/>
+                                <line x1="20" y1="8" x2="20" y2="14"/>
+                                <line x1="23" y1="11" x2="17" y2="11"/>
+                            </svg>
+                            Follow
+                        {% endif %}
+                    </button>
+                    <a href="{{ url_for('messages.chat', username=profile.username) }}" class="btn btn-sm" style="background: var(--bg-tertiary); color: var(--text-secondary); text-decoration: none;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                        Message
+                    </a>
+                    <form method="POST" action="{{ url_for('main.block_user', username=profile.username) }}">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn btn-sm btn-secondary" type="submit">Block</button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Profile Stats -->
+        <div class="profile-stats">
+            <a href="/{{ profile.username }}/followers" class="profile-stat-card" style="text-decoration: none;">
+                <div class="profile-stat-value">{{ profile.followers_count }}</div>
+                <div class="profile-stat-label">Followers</div>
+            </a>
+            <a href="/{{ profile.username }}/following" class="profile-stat-card" style="text-decoration: none;">
+                <div class="profile-stat-value">{{ profile.following_count }}</div>
+                <div class="profile-stat-label">Following</div>
+            </a>
+            <div class="profile-stat-card">
+                <div class="profile-stat-value">{{ profile.blogs_count }}</div>
+                <div class="profile-stat-label">Blogs</div>
+            </div>
+            <div class="profile-stat-card">
+                <div class="profile-stat-value">{{ profile.projects_count }}</div>
+                <div class="profile-stat-label">Projects</div>
+            </div>
+            <div class="profile-stat-card">
+                <div class="profile-stat-value">{{ profile.total_views }}</div>
+                <div class="profile-stat-label">Views</div>
+            </div>
+            <div class="profile-stat-card">
+                <div class="profile-stat-value">{{ profile.total_likes }}</div>
+                <div class="profile-stat-label">Likes</div>
+            </div>
+            <div class="profile-stat-card">
+                <div class="profile-stat-value">{{ profile.profile_views }}</div>
+                <div class="profile-stat-label">Profile Views</div>
+            </div>
+        </div>
+
+        <section class="profile-proof-card">
+            <div>
+                <span class="hero-eyebrow">Public Developer Identity</span>
+                <h2>{{ profile.full_name or profile.username }}'s showcase profile</h2>
+                <p>Use this page as a living portfolio for resumes, applications, and community credibility.</p>
+                <div class="completion-meter">
+                    <div class="completion-meter-label">
+                        <span>Level {{ profile.xp.level }} · {{ profile.xp.total }} XP</span>
+                        <strong>{{ profile.xp.percent }}%</strong>
+                    </div>
+                    <div class="completion-track"><div class="completion-fill" style="width: {{ profile.xp.percent }}%;"></div></div>
+                </div>
+                {% if session.get('user') == profile.username %}
+                <div class="completion-meter">
+                    <div class="completion-meter-label">
+                        <span>Profile completion</span>
+                        <strong>{{ profile.completion }}%</strong>
+                    </div>
+                    <div class="completion-track"><div class="completion-fill" style="width: {{ profile.completion }}%;"></div></div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="profile-proof-actions">
+                <button class="btn btn-secondary" type="button" id="copyProfileLink">Copy Profile Link</button>
+                {% if profile.website %}
+                <a href="{{ profile.website }}" target="_blank" rel="noopener" class="btn btn-secondary">Website</a>
+                {% endif %}
+                {% if session.get('user') == profile.username %}
+                <a href="{{ url_for('main.edit_profile') }}" class="btn btn-primary">Improve Profile</a>
+                {% endif %}
+            </div>
+        </section>
+
+        {% if featured_blog or featured_project %}
+        <section class="featured-showcase">
+            <div class="card-header">
+                <h2 class="card-title">Featured Work</h2>
+                {% if session.get('user') == profile.username %}
+                <a href="{{ url_for('main.edit_profile') }}" class="btn btn-secondary btn-sm">Change Featured</a>
+                {% endif %}
+            </div>
+            <div class="featured-showcase-grid">
+                {% if featured_blog %}
+                <article class="showcase-card" onclick="window.location.href='{{ url_for('blog.blog_detail', slug=featured_blog.slug) }}'">
+                    <span class="showcase-label">Featured Blog</span>
+                    <h3>{{ featured_blog.title }}</h3>
+                    <p>{{ featured_blog.excerpt[:150] if featured_blog.excerpt else featured_blog.content[:150] }}...</p>
+                    <div class="showcase-meta">{{ featured_blog.views_count }} views &middot; {{ featured_blog.likes_count }} likes &middot; {{ featured_blog.reading_time }} min read</div>
+                </article>
+                {% endif %}
+                {% if featured_project %}
+                <article class="showcase-card" onclick="window.location.href='{{ url_for('project.project_detail', slug=featured_project.slug) }}'">
+                    <span class="showcase-label">Featured Project</span>
+                    <h3>{{ featured_project.title }}</h3>
+                    <p>{{ featured_project.description[:150] }}...</p>
+                    <div class="showcase-meta">{{ featured_project.stars_count }} stars{% if featured_project.tech_stack %} &middot; {{ featured_project.tech_stack|join(', ') }}{% endif %}</div>
+                </article>
+                {% endif %}
+            </div>
+        </section>
+        {% endif %}
+
+        <!-- Profile Tabs -->
+        <nav class="profile-tabs" role="tablist">
+            <a href="#blogs" class="profile-tab active" role="tab" data-profile-tab="blogs">
+                Blogs <span class="profile-tab-count">({{ blogs|length }})</span>
+            </a>
+            <a href="#projects" class="profile-tab" role="tab" data-profile-tab="projects">
+                Projects <span class="profile-tab-count">({{ projects|length }})</span>
+            </a>
+            <a href="#about" class="profile-tab" role="tab" data-profile-tab="about">
+                About
+            </a>
+            <a href="#activity" class="profile-tab" role="tab" data-profile-tab="activity">
+                Activity
+            </a>
+        </nav>
+
+        <!-- Tab Content -->
+        <div id="blogs-tab" class="tab-content">
+            <div class="feed-grid">
+                {% for blog in blogs %}
+                <article class="blog-card hover-lift" onclick="window.location.href='/blog/{{ blog.slug }}'">
+                    {% if blog.thumbnail %}
+                    <div class="blog-card-image">
+                        <img src="{{ blog.thumbnail|upload_url('blogs') }}" alt="{{ blog.title }}" loading="lazy">
+                    </div>
+                    {% endif %}
+                    <div class="blog-card-content">
+                        <div class="blog-card-meta">
+                            <span class="blog-category">{{ blog.category }}</span>
+                            <span class="blog-reading-time">{{ blog.reading_time }} min read</span>
+                        </div>
+                        <h3 class="blog-card-title">{{ blog.title }}</h3>
+                        <p class="blog-card-excerpt">{{ blog.excerpt[:120] }}...</p>
+                        <div class="blog-card-footer">
+                            <div class="blog-card-stats">
+                                <span>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                                    {{ blog.likes_count }}
+                                </span>
+                                <span>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                                    {{ blog.comments_count }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+                {% else %}
+                <div style="text-align: center; padding: var(--spacing-2xl); color: var(--text-muted);">
+                    <p>No blogs yet</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div id="projects-tab" class="tab-content" style="display: none;">
+            <div class="feed-grid">
+                {% for project in projects %}
+                <article class="project-card hover-lift" onclick="window.location.href='/project/{{ project.slug }}'">
+                    {% if project.thumbnail %}
+                    <div class="project-card-image">
+                        <img src="{{ project.thumbnail|upload_url('projects') }}" alt="{{ project.title }}" loading="lazy">
+                    </div>
+                    {% endif %}
+                    <div class="project-card-content">
+                        <h3 class="project-card-title">{{ project.title }}</h3>
+                        <p class="project-card-excerpt">{{ project.description[:100] }}...</p>
+                        <div class="project-tech-stack">
+                            {% for tech in project.tech_stack %}
+                            <span class="skill-tag">{{ tech }}</span>
+                            {% endfor %}
+                        </div>
+                        <div class="project-card-links">
+                            {% if project.github_url %}
+                            <a href="{{ project.github_url }}" target="_blank" class="btn btn-sm" style="background: var(--bg-tertiary); color: var(--text-secondary);" onclick="event.stopPropagation();">
+                                GitHub
+                            </a>
+                            {% endif %}
+                            {% if project.demo_url %}
+                            <a href="{{ project.demo_url }}" target="_blank" class="btn btn-primary btn-sm" onclick="event.stopPropagation();">
+                                Live Demo
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </article>
+                {% else %}
+                <div style="text-align: center; padding: var(--spacing-2xl); color: var(--text-muted);">
+                    <p>No projects yet</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div id="about-tab" class="tab-content" style="display: none;">
+            <div class="content-card">
+                <h3>About {{ profile.username }}</h3>
+                <p style="color: var(--text-secondary); line-height: 1.8;">{{ profile.about or profile.bio }}</p>
+                
+                {% if profile.social_links %}
+                <div style="margin-top: var(--spacing-xl);">
+                    <h4 style="margin-bottom: var(--spacing-md);">Connect</h4>
+                    <div style="display: flex; gap: var(--spacing-md);">
+                        {% for social in profile.social_links %}
+                        <a href="{{ social.url }}" target="_blank" rel="noopener" class="social-link-item" style="text-decoration: none;">
+                            <div class="social-link-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="{{ social.icon }}"/></svg>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div id="activity-tab" class="tab-content" style="display: none;">
+            <div class="content-card">
+                {% if session.get('user') and session['user'] != profile.username %}
+                <form method="POST" action="{{ url_for('main.report_user', username=profile.username) }}" class="settings-stack" style="margin-bottom: var(--spacing-xl);">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <select class="form-input" name="reason">
+                        <option value="spam">Spam</option>
+                        <option value="abuse">Abuse or harassment</option>
+                        <option value="impersonation">Impersonation</option>
+                        <option value="other">Other</option>
+                    </select>
+                    <textarea class="form-input" name="details" placeholder="Optional details"></textarea>
+                    <button class="btn btn-secondary" type="submit">Report User</button>
+                </form>
+                {% endif %}
+                <div class="activity-timeline">
+                    {% for activity in activities %}
+                    <div class="activity-item" style="display: flex; gap: var(--spacing-md); padding: var(--spacing-md) 0; border-bottom: 1px solid var(--border);">
+                        <div class="activity-icon" style="width: 36px; height: 36px; border-radius: 50%; background: var(--primary-light); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polyline points="12 6 12 12 16 14"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p style="font-size: 0.9375rem;"><strong>{{ profile.username }}</strong> {{ activity.action }}</p>
+                            <span style="font-size: 0.8125rem; color: var(--text-muted);">{{ activity.time }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/profile.js') }}"></script>
+{% endblock %}

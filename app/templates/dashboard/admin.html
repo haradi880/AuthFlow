@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Admin - AuthFlow{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">{% endblock %}
+{% block content %}
+<div class="dashboard-container">
+    {% include 'components/sidebar.html' %}
+    <main class="main-content">
+        <nav class="top-nav">
+            <h1 class="page-title">Admin</h1>
+            <a href="{{ url_for('main.home') }}" class="btn btn-sm" style="background: var(--bg-secondary); color: var(--text-secondary);">Back</a>
+        </nav>
+        <div class="stats-grid">
+            <div class="stat-card"><div class="stat-label">Users</div><div class="stat-value">{{ total_users }}</div></div>
+            <div class="stat-card"><div class="stat-label">Admins</div><div class="stat-value">{{ total_admins }}</div></div>
+            <div class="stat-card"><div class="stat-label">Blogs</div><div class="stat-value">{{ total_blogs }}</div></div>
+            <div class="stat-card"><div class="stat-label">Open Reports</div><div class="stat-value">{{ open_reports }}</div></div>
+        </div>
+        <section class="content-card">
+            <div class="card-header"><h2 class="card-title">User Management</h2></div>
+            <div style="overflow-x: auto;">
+                <table class="admin-table">
+                    <thead><tr><th>User</th><th>Email</th><th>Role</th><th>Status</th><th>Verified</th><th>Action</th></tr></thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td><a href="{{ url_for('main.public_profile', username=user.username) }}" style="color: var(--text-primary); text-decoration: none;">{{ user.username }}</a></td>
+                            <td>{{ user.email }}</td>
+                            <td><span class="badge {{ 'badge-admin' if user.is_admin else 'badge-user' }}">{{ 'Admin' if user.is_admin else 'User' }}</span></td>
+                            <td>{{ 'Active' if user.active else 'Suspended' }}</td>
+                            <td>{{ 'Yes' if user.is_verified else 'No' }}</td>
+                            <td>
+                                {% if not user.is_admin %}
+                                <form method="POST" action="{{ url_for('admin.toggle_user_active', user_id=user.id) }}">
+                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                                    <button class="btn btn-secondary btn-sm" type="submit">{{ 'Suspend' if user.active else 'Restore' }}</button>
+                                </form>
+                                {% else %}-{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        <section class="content-card">
+            <div class="card-header"><h2 class="card-title">Moderation Reports</h2></div>
+            <div style="overflow-x: auto;">
+                <table class="admin-table">
+                    <thead><tr><th>Reported User</th><th>Reason</th><th>Details</th><th>Status</th><th>Action</th></tr></thead>
+                    <tbody>
+                        {% for report in reports %}
+                        <tr>
+                            <td><a href="{{ url_for('main.public_profile', username=report.reported_user.username) }}" style="color: var(--text-primary);">{{ report.reported_user.username }}</a></td>
+                            <td>{{ report.reason }}</td>
+                            <td>{{ report.details or '-' }}</td>
+                            <td>{{ report.status }}</td>
+                            <td>
+                                <form method="POST" action="{{ url_for('admin.update_report_status', report_id=report.id) }}" style="display: flex; gap: var(--spacing-sm);">
+                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                                    <select class="form-input" name="status">
+                                        {% for status in ['open', 'reviewing', 'resolved', 'dismissed'] %}
+                                        <option value="{{ status }}" {{ 'selected' if report.status == status }}>{{ status|title }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button class="btn btn-primary btn-sm" type="submit">Save</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="5">No reports yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        <section class="content-card">
+            <div class="card-header"><h2 class="card-title">Content Review Queue</h2></div>
+            <div class="suggestion-list">
+                {% for blog in review_blogs %}
+                <div class="suggestion-item">
+                    <div class="user-avatar">B</div><div><strong>{{ blog.title }}</strong><p>Blog draft by @{{ blog.author.username }}</p></div>
+                    <form method="POST" action="{{ url_for('admin.update_blog_status', blog_id=blog.id) }}">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="status" value="published">
+                        <button class="btn btn-primary btn-sm" type="submit">Publish</button>
+                    </form>
+                </div>
+                {% endfor %}
+                {% for project in review_projects %}
+                <div class="suggestion-item">
+                    <div class="user-avatar">P</div><div><strong>{{ project.title }}</strong><p>Project draft by @{{ project.author.username }}</p></div>
+                    <form method="POST" action="{{ url_for('admin.update_project_status', project_id=project.id) }}">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="status" value="published">
+                        <button class="btn btn-primary btn-sm" type="submit">Publish</button>
+                    </form>
+                </div>
+                {% endfor %}
+                {% if not review_blogs and not review_projects %}
+                <div class="empty-state">No draft content in the review queue.</div>
+                {% endif %}
+            </div>
+        </section>
+    </main>
+</div>
+{% endblock %}

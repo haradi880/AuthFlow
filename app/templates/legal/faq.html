@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}FAQ - AuthFlow{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/faq.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    {% include 'components/sidebar.html' %}
+    <main class="main-content faq-shell">
+        <nav class="top-nav">
+            <div class="top-nav-title">
+                <button class="menu-toggle" type="button" aria-label="Open navigation">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+                    </svg>
+                </button>
+                <div>
+                    <p class="page-kicker">Help center</p>
+                    <h1 class="page-title">AuthFlow FAQ</h1>
+                </div>
+            </div>
+            <a href="{{ url_for('devlogs.index') }}" class="btn btn-primary btn-sm">Open DevFeed</a>
+        </nav>
+
+        <section class="faq-hero">
+            <div>
+                <span class="hero-eyebrow">Modern developer ecosystem</span>
+                <h2>Everything builders need to understand the platform.</h2>
+                <p>Search features, filter by category, and expand each answer without leaving the page.</p>
+            </div>
+            <label class="faq-search">
+                <span>Search FAQ</span>
+                <input id="faqSearch" type="search" placeholder="Search devlogs, XP, challenges, teams...">
+            </label>
+        </section>
+
+        <div class="faq-filters" id="faqFilters">
+            <button type="button" class="active" data-category="all">All</button>
+            <button type="button" data-category="core">Core</button>
+            <button type="button" data-category="ecosystem">Ecosystem</button>
+            <button type="button" data-category="social">Social</button>
+            <button type="button" data-category="growth">Growth</button>
+            <button type="button" data-category="security">Security</button>
+        </div>
+
+        <section class="faq-grid" id="faqList">
+            {% set faqs = [
+                ('core', 'What is AuthFlow?', 'AuthFlow is evolving into a developer ecosystem for publishing, project showcases, daily build logs, collaboration, hiring, AI workflows, launches, challenges, and professional identity.'),
+                ('core', 'What are DevLogs?', 'DevLogs are short build-in-public updates with progress, milestones, hashtags, media, likes, comments, reposts, bookmarks, and XP. They are designed for daily activity and developer journey timelines.'),
+                ('core', 'How do blogs and projects fit in?', 'Blogs are long-form knowledge posts. Projects are portfolio-grade shipped work. DevLogs capture the daily story between those bigger artifacts.'),
+                ('ecosystem', 'What will the AI tools area support?', 'The AI tools area is planned for prompts, workflows, agents, automation templates, datasets, models, ratings, reviews, collections, and AI creator reputation.'),
+                ('ecosystem', 'How will challenges work?', 'Challenges will have public briefs, countdowns, submissions, voting, leaderboards, winners, XP rewards, trophies, and history pages. Submissions are public by design.'),
+                ('ecosystem', 'What is the developer marketplace?', 'The marketplace will support hiring, collaboration requests, startup needs, proposals, ratings, skill filters, availability, bookmarks, and messaging.'),
+                ('ecosystem', 'What are teams?', 'Teams will provide shared profiles, branding, roles, permissions, chat, projects, blogs, files, activity feeds, invites, and analytics for collaborative builders.'),
+                ('ecosystem', 'What is the open-source hub?', 'The open-source hub is planned for good-first issues, contributor requests, hackathon projects, issue boards, maintainers, labels, discussions, and GitHub-ready integrations.'),
+                ('ecosystem', 'What are product launches?', 'Launches will let makers publish apps, SaaS products, AI tools, APIs, robotics projects, and open-source tools with upvotes, rankings, comments, maker profiles, media, and analytics.'),
+                ('ecosystem', 'What are stack pages?', 'Stack pages such as Python, Flask, robotics, and AI will aggregate creators, blogs, projects, tools, discussions, challenge winners, and SEO-focused topic content.'),
+                ('social', 'How does following work?', 'Following personalizes feeds and creates social graph context for profile discovery, message permissions, notifications, and future recommendations.'),
+                ('social', 'How do notifications work?', 'Notifications are stored in the database, shown in the notification center, counted in badges, and optionally emailed based on user preferences.'),
+                ('social', 'How does messaging work?', 'Messages persist in the database, support unread counts, AJAX sending, polling, block checks, and per-user message permissions.'),
+                ('growth', 'What is XP?', 'XP rewards meaningful activity such as daily login, publishing, receiving likes or stars, comments, follows, profile completion, and daily DevLogs.'),
+                ('growth', 'What are badges and rankings?', 'Badges, streaks, rankings, trophies, and leaderboards are planned identity layers that will build on XP, challenge wins, AI contributions, and launch performance.'),
+                ('growth', 'How can I grow my profile?', 'Complete your profile, publish useful blogs, ship projects, post DevLogs consistently, join challenges, help other creators, and keep your work tagged clearly.'),
+                ('security', 'How is account security handled?', 'The app uses hashed passwords, email OTP verification, password reset OTPs, login lockout, CSRF protection, secure upload validation, and moderation controls.'),
+                ('security', 'Are uploads safe?', 'Uploads are folder-restricted, extension-checked, randomly named, image-verified where applicable, resized, and served only from allowlisted folders.'),
+                ('security', 'How is spam reduced?', 'Sensitive actions are rate limited, CSRF-protected where session based, and moderation/reporting workflows are available for admin review.')
+            ] %}
+
+            {% for category, question, answer in faqs %}
+            <article class="faq-item" data-category="{{ category }}" data-search="{{ (question ~ ' ' ~ answer)|lower }}">
+                <button type="button" class="faq-question" aria-expanded="false">
+                    <span>{{ question }}</span>
+                    <span class="faq-toggle">+</span>
+                </button>
+                <div class="faq-answer">
+                    <p>{{ answer }}</p>
+                </div>
+            </article>
+            {% endfor %}
+        </section>
+    </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script src="{{ url_for('static', filename='js/faq.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Following Feed - AuthFlow{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/feed.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/blog.css') }}">
+{% endblock %}
+{% block content %}
+<div class="dashboard-container">
+    {% include 'components/sidebar.html' %}
+    <main class="main-content">
+        <nav class="top-nav"><div><p class="page-kicker">Personal Feed</p><h1 class="page-title">Following</h1></div></nav>
+        <div class="feed-grid">
+            {% for blog in blogs %}
+                {% include 'components/blog_card.html' %}
+            {% else %}
+                <div class="empty-state"><h3>No posts yet</h3><p>Follow developers to build your personal feed.</p></div>
+            {% endfor %}
+        </div>
+    </main>
+</div>
+{% endblock %}

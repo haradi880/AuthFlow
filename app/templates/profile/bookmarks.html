@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Bookmarks - AuthFlow{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/feed.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/blog.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    {% include 'components/sidebar.html' %}
+    <main class="main-content">
+        <nav class="top-nav">
+            <div class="top-nav-title">
+                <button class="menu-toggle" type="button" aria-label="Open navigation">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"/>
+                        <line x1="3" y1="6" x2="21" y2="6"/>
+                        <line x1="3" y1="18" x2="21" y2="18"/>
+                    </svg>
+                </button>
+                <div>
+                    <p class="page-kicker">Reading List</p>
+                    <h1 class="page-title">Bookmarks</h1>
+                </div>
+            </div>
+            <a href="{{ url_for('blog.blogs_feed') }}" class="btn btn-secondary btn-sm">Explore Blogs</a>
+        </nav>
+
+        <section class="feed-intro">
+            <div>
+                <span class="hero-eyebrow">Saved for later</span>
+                <h2>Your personal library of posts worth returning to.</h2>
+            </div>
+        </section>
+
+        <div class="feed-grid">
+            {% for blog in blogs %}
+                {% include 'components/blog_card.html' %}
+            {% else %}
+                <div class="empty-state">
+                    <h3>No bookmarks yet</h3>
+                    <p>Save posts from blog detail pages and they will appear here.</p>
+                </div>
+            {% endfor %}
+        </div>
+
+        {% if pagination.has_next %}
+        <div class="load-more-row">
+            <a class="btn btn-secondary" href="{{ url_for('main.bookmarks', page=pagination.next_num) }}">Load More</a>
+        </div>
+        {% endif %}
+    </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

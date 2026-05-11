@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}{{ user.username }} Followers - AuthFlow{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+{% endblock %}
+{% block content %}
+<div class="dashboard-container">
+    {% include 'components/sidebar.html' %}
+    <main class="main-content">
+        <nav class="top-nav">
+            <div style="display: flex; align-items: center; gap: var(--spacing-md);">
+                <button class="menu-toggle">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"/>
+                        <line x1="3" y1="6" x2="21" y2="6"/>
+                        <line x1="3" y1="18" x2="21" y2="18"/>
+                    </svg>
+                </button>
+                {% set items = [(user.username, url_for('main.public_profile', username=user.username)), ('Followers', None)] %}
+                {% include 'components/breadcrumb.html' %}
+            </div>
+        </nav>
+
+        <section class="content-card">
+            <div class="card-header">
+                <h1 class="card-title">Followers of @{{ user.username }}</h1>
+            </div>
+            <div class="followers-list">
+                {% for follower in followers %}
+                <a href="{{ url_for('main.public_profile', username=follower.username) }}" class="settings-nav-item" style="text-decoration: none; color: inherit; display: block; padding: var(--spacing-md); border-bottom: 1px solid var(--border);">
+                    <div class="settings-nav-left" style="display: flex; align-items: center; gap: var(--spacing-md);">
+                        <div class="user-avatar" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: var(--gradient-primary); color: white; border-radius: 50%; font-weight: 600;">
+                            {{ follower.username[0]|upper }}
+                        </div>
+                        <div class="settings-nav-text">
+                            <h4 style="margin: 0; font-size: 1rem;">{{ follower.full_name or follower.username }}</h4>
+                            <p style="margin: 0; font-size: 0.875rem; color: var(--text-muted);">@{{ follower.username }}</p>
+                        </div>
+                    </div>
+                </a>
+                {% else %}
+                <div style="text-align: center; padding: var(--spacing-2xl); color: var(--text-muted);">
+                    <p>No followers yet.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+    </main>
+</div>
+{% endblock %}

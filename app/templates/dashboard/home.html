@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - AuthFlow{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/feed.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/blog.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    {% include 'components/sidebar.html' %}
+    <main class="main-content">
+        <nav class="top-nav">
+            <div class="top-nav-title">
+                <button class="menu-toggle" type="button" aria-label="Open navigation">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+                    </svg>
+                </button>
+                <div>
+                    <p class="page-kicker">Workspace</p>
+                    <h1 class="page-title">Dashboard</h1>
+                </div>
+            </div>
+            <div class="top-nav-actions">
+                <a href="{{ url_for('blog.create_blog') }}" class="btn btn-primary btn-sm">Write Blog</a>
+                <a href="{{ url_for('project.create_project') }}" class="btn btn-secondary btn-sm">New Project</a>
+            </div>
+        </nav>
+
+        <section class="dashboard-hero">
+            <div>
+                <span class="hero-eyebrow">Build your developer presence</span>
+                <h2>Publish ideas, ship projects, and keep your network moving.</h2>
+                <p>Your latest content, community signals, and publishing actions live here.</p>
+            </div>
+            <div class="hero-actions">
+                <a href="{{ url_for('devlogs.index') }}" class="btn btn-primary">Open DevFeed</a>
+                <a href="{{ url_for('blog.blogs_feed') }}" class="btn btn-secondary">Explore Blogs</a>
+                <a href="{{ url_for('project.projects_feed') }}" class="btn btn-secondary">Explore Projects</a>
+            </div>
+        </section>
+
+        <section class="content-card">
+            <div class="card-header">
+                <h2 class="card-title">Live DevLogs</h2>
+                <a href="{{ url_for('devlogs.index') }}" class="btn btn-secondary btn-sm">View Feed</a>
+            </div>
+            <div class="suggestion-list">
+                {% for devlog in recent_devlogs %}
+                <a class="suggestion-item" href="{{ url_for('devlogs.detail', devlog_id=devlog.id) }}">
+                    <div class="user-avatar">{{ devlog.author.username[0] | upper }}</div>
+                    <div>
+                        <strong>@{{ devlog.author.username }} · {{ devlog.progress }}%</strong>
+                        <p>{{ devlog.preview }}</p>
+                    </div>
+                </a>
+                {% else %}
+                <div class="empty-state">No DevLogs yet. Start the feed with today&apos;s progress.</div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Your Views</div>
+                <div class="stat-value">{{ dashboard_stats.blog_views }}</div>
+                <div class="stat-hint">Total reads on your blogs</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Your Likes</div>
+                <div class="stat-value">{{ dashboard_stats.blog_likes }}</div>
+                <div class="stat-hint">Reactions on your writing</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Followers</div>
+                <div class="stat-value">{{ dashboard_stats.followers }}</div>
+                <div class="stat-hint">People following your work</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Profile</div>
+                <div class="stat-value">{{ dashboard_stats.profile_completion }}%</div>
+                <div class="stat-hint">{{ dashboard_stats.profile_views }} profile views</div>
+            </div>
+        </div>
+
+        <section class="content-card">
+            <div class="card-header">
+                <h2 class="card-title">Publishing Health</h2>
+                <a href="{{ url_for('main.edit_profile') }}" class="btn btn-secondary btn-sm">Improve Profile</a>
+            </div>
+            <div class="xp-panel">
+                <div>
+                    <span class="hero-eyebrow">Level {{ dashboard_stats.xp.level }}</span>
+                    <h3>{{ dashboard_stats.xp.total }} XP</h3>
+                    <p>{{ dashboard_stats.xp.current }} / {{ dashboard_stats.xp.needed }} XP toward Level {{ dashboard_stats.xp.level + 1 }}</p>
+                </div>
+                <div class="xp-progress-track"><div class="xp-progress-fill" style="width: {{ dashboard_stats.xp.percent }}%;"></div></div>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-label">Published Blogs</div><div class="stat-value">{{ dashboard_stats.published_blogs }}</div></div>
+                <div class="stat-card"><div class="stat-label">Blog Drafts</div><div class="stat-value">{{ dashboard_stats.draft_blogs }}</div></div>
+                <div class="stat-card"><div class="stat-label">Published Projects</div><div class="stat-value">{{ dashboard_stats.published_projects }}</div></div>
+                <div class="stat-card"><div class="stat-label">Project Drafts</div><div class="stat-value">{{ dashboard_stats.draft_projects }}</div></div>
+            </div>
+            {% if completion_tips %}
+            <div class="suggestion-list" style="margin-top: var(--spacing-lg);">
+                {% for tip in completion_tips %}
+                <div class="suggestion-item"><div class="user-avatar">{{ loop.index }}</div><div><strong>{{ tip }}</strong><p>Small profile upgrades make your public page easier to trust.</p></div></div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </section>
+
+        <section class="content-card">
+            <div class="card-header"><h2 class="card-title">Drafts</h2></div>
+            <div class="suggestion-list">
+                {% for blog in user_drafts %}
+                <a class="suggestion-item" href="{{ url_for('blog.edit_blog', blog_id=blog.id) }}">
+                    <div class="user-avatar">B</div><div><strong>{{ blog.title }}</strong><p>Blog draft updated {{ blog.updated_at.strftime('%b %d') }}</p></div>
+                </a>
+                {% endfor %}
+                {% for project in project_drafts %}
+                <a class="suggestion-item" href="{{ url_for('project.edit_project', project_id=project.id) }}">
+                    <div class="user-avatar">P</div><div><strong>{{ project.title }}</strong><p>Project draft updated {{ project.updated_at.strftime('%b %d') }}</p></div>
+                </a>
+                {% endfor %}
+                {% if not user_drafts and not project_drafts %}
+                <div class="empty-state">No drafts waiting on you.</div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="content-card">
+            <div class="card-header">
+                <h2 class="card-title">Latest Blogs</h2>
+                <a href="{{ url_for('blog.blogs_feed') }}" class="btn btn-secondary btn-sm">View All</a>
+            </div>
+            <div class="feed-grid">
+                {% for blog in recent_blogs %}
+                    {% include 'components/blog_card.html' %}
+                {% else %}
+                <div class="empty-state">No published blogs yet.</div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="content-card">
+            <div class="card-header">
+                <h2 class="card-title">From People You Follow</h2>
+                <a href="{{ url_for('main.following_feed') }}" class="btn btn-secondary btn-sm">Open Feed</a>
+            </div>
+            <div class="feed-grid">
+                {% for blog in following_blogs %}
+                    {% include 'components/blog_card.html' %}
+                {% else %}
+                <div class="empty-state">Follow developers to personalize this feed.</div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="content-card">
+            <div class="card-header">
+                <h2 class="card-title">Latest Projects</h2>
+                <a href="{{ url_for('project.projects_feed') }}" class="btn btn-secondary btn-sm">View All</a>
+            </div>
+            <div class="feed-grid">
+                {% for project in recent_projects %}
+                <article class="project-card hover-lift" onclick="window.location.href='{{ url_for('project.project_detail', slug=project.slug) }}'">
+                    {% if project.thumbnail %}
+                    <div class="project-card-image"><img src="{{ project.thumbnail|upload_url('projects') }}" alt="{{ project.title }}" loading="lazy"></div>
+                    {% endif %}
+                    <div class="project-card-content">
+                        <h3 class="project-card-title">{{ project.title }}</h3>
+                        <p class="project-card-excerpt">{{ project.description[:150] }}</p>
+                    </div>
+                </article>
+                {% else %}
+                <div class="empty-state">No published projects yet.</div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="content-card">
+            <div class="card-header">
+                <h2 class="card-title">People To Follow</h2>
+            </div>
+            <div class="suggestion-list">
+                {% for user in suggested_users %}
+                <a class="suggestion-item" href="{{ url_for('main.public_profile', username=user.username) }}">
+                    <div class="user-avatar">{{ user.username[0] | upper }}</div>
+                    <div><strong>{{ user.full_name or user.username }}</strong><p>@{{ user.username }}</p></div>
+                </a>
+                {% else %}
+                <div class="empty-state">No suggestions yet.</div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="content-card">
+            <div class="card-header">
+                <h2 class="card-title">Recently Viewed</h2>
+            </div>
+            <div class="feed-grid">
+                {% for blog in recently_viewed %}
+                    {% include 'components/blog_card.html' %}
+                {% else %}
+                <div class="empty-state">Open a few posts and they will show up here.</div>
+                {% endfor %}
+            </div>
+        </section>
+    </main>
+</div>
+{% endblock %}
+{% block extra_js %}<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>{% endblock %}
