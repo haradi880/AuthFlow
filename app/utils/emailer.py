@@ -1,14 +1,8 @@
 """
-Production Email Helper for AuthFlow
-------------------------------------
-Features:
-- Clean production structure
-- IPv4 forced connection support
-- TLS / SSL support
-- Detailed logging
-- Safe cleanup
-- Better timeout handling
-- Render deployment compatibility
+AuthFlow Email Helper
+---------------------
+Stable Gmail SMTP SSL implementation
+Optimized for Render deployment
 """
 
 import smtplib
@@ -16,8 +10,7 @@ import socket
 import ssl
 import traceback
 
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+from email.message import EmailMessage
 
 from flask import current_app
 
@@ -29,13 +22,10 @@ from flask import current_app
 _original_getaddrinfo = socket.getaddrinfo
 
 
-def force_ipv4_only():
-    """
-    Force Python SMTP to use IPv4 only.
-    Helps fix Render/Gmail networking issues.
-    """
+def force_ipv4():
 
-    def ipv4_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+    def ipv4_only(host, port, family=0, type=0, proto=0, flags=0):
+
         return _original_getaddrinfo(
             host,
             port,
@@ -45,11 +35,11 @@ def force_ipv4_only():
             flags
         )
 
-    socket.getaddrinfo = ipv4_getaddrinfo
+    socket.getaddrinfo = ipv4_only
 
 
 # =========================================================
-# MAIN EMAIL FUNCTION
+# SEND EMAIL
 # =========================================================
 
 def send_email(to_email, subject, body):
@@ -70,7 +60,7 @@ def send_email(to_email, subject, body):
         mail_port = int(
             current_app.config.get(
                 "MAIL_PORT",
-                587
+                465
             )
         )
 
@@ -87,22 +77,8 @@ def send_email(to_email, subject, body):
             mail_username
         )
 
-        mail_use_tls = str(
-            current_app.config.get(
-                "MAIL_USE_TLS",
-                "true"
-            )
-        ).lower() == "true"
-
-        mail_use_ssl = str(
-            current_app.config.get(
-                "MAIL_USE_SSL",
-                "false"
-            )
-        ).lower() == "true"
-
         # =====================================================
-        # DEBUG LOGGING
+        # LOGGING
         # =====================================================
 
         current_app.logger.info("=" * 60)
@@ -110,16 +86,14 @@ def send_email(to_email, subject, body):
         current_app.logger.info(f"TO: {to_email}")
         current_app.logger.info(f"SUBJECT: {subject}")
 
-        current_app.logger.info("SMTP CONFIG:")
-        current_app.logger.info(f"MAIL_SERVER: {mail_server}")
-        current_app.logger.info(f"MAIL_PORT: {mail_port}")
-        current_app.logger.info(f"MAIL_USE_TLS: {mail_use_tls}")
-        current_app.logger.info(f"MAIL_USE_SSL: {mail_use_ssl}")
+        current_app.logger.info("SMTP CONFIG")
+        current_app.logger.info(f"SERVER: {mail_server}")
+        current_app.logger.info(f"PORT: {mail_port}")
         current_app.logger.info(
-            f"MAIL_USERNAME EXISTS: {bool(mail_username)}"
+            f"USERNAME EXISTS: {bool(mail_username)}"
         )
         current_app.logger.info(
-            f"MAIL_PASSWORD EXISTS: {bool(mail_password)}"
+            f"PASSWORD EXISTS: {bool(mail_password)}"
         )
 
         # =====================================================
@@ -134,161 +108,79 @@ def send_email(to_email, subject, body):
 
             return False
 
-        if mail_use_tls and mail_use_ssl:
-
-            current_app.logger.error(
-                "TLS and SSL cannot both be enabled."
-            )
-
-            return False
-
         # =====================================================
         # FORCE IPV4
         # =====================================================
 
-        current_app.logger.info(
-            "Forcing IPv4 connection..."
-        )
+        force_ipv4()
 
-        force_ipv4_only()
+        current_app.logger.info(
+            "IPv4 mode enabled."
+        )
 
         # =====================================================
         # DNS TEST
         # =====================================================
 
-        try:
+        smtp_ip = socket.gethostbyname(mail_server)
 
-            smtp_ip = socket.gethostbyname(mail_server)
-
-            current_app.logger.info(
-                f"{mail_server} resolved to {smtp_ip}"
-            )
-
-        except Exception as dns_error:
-
-            current_app.logger.error(
-                "DNS resolution failed."
-            )
-
-            current_app.logger.error(str(dns_error))
-
-            return False
+        current_app.logger.info(
+            f"{mail_server} resolved to {smtp_ip}"
+        )
 
         # =====================================================
-        # CREATE EMAIL MESSAGE
+        # CREATE EMAIL
         # =====================================================
 
-        msg = MIMEMultipart()
+        msg = EmailMessage()
 
+        msg["Subject"] = subject
         msg["From"] = f"AuthFlow <{mail_sender}>"
         msg["To"] = to_email
-        msg["Subject"] = subject
 
-        msg.attach(
-            MIMEText(body, "plain")
-        )
+        msg.set_content(body)
 
         current_app.logger.info(
             "Email message created."
         )
 
         # =====================================================
-        # SMTP CONNECTION
+        # SSL CONTEXT
+        # =====================================================
+
+        ssl_context = ssl.create_default_context()
+
+        # =====================================================
+        # CONNECT SMTP SSL
         # =====================================================
 
         current_app.logger.info(
-            "Connecting to SMTP server..."
+            "Connecting to Gmail SMTP SSL..."
         )
 
-        socket.setdefaulttimeout(20)
-
-        # =====================================================
-        # SSL MODE
-        # =====================================================
-
-        if mail_use_ssl:
-
-            current_app.logger.info(
-                "Using SMTP SSL mode..."
-            )
-
-            ssl_context = ssl.create_default_context()
-
-            server = smtplib.SMTP_SSL(
-                host=mail_server,
-                port=mail_port,
-                timeout=20,
-                context=ssl_context
-            )
-
-        # =====================================================
-        # STANDARD MODE
-        # =====================================================
-
-        else:
-
-            current_app.logger.info(
-                "Using SMTP standard mode..."
-            )
-
-            server = smtplib.SMTP(
-                host=mail_server,
-                port=mail_port,
-                timeout=20
-            )
+        server = smtplib.SMTP_SSL(
+            host=mail_server,
+            port=mail_port,
+            timeout=20,
+            context=ssl_context
+        )
 
         current_app.logger.info(
-            "SMTP socket connected."
+            "SMTP SSL connection established."
         )
 
         # =====================================================
-        # SMTP DEBUG
+        # DEBUG MODE
         # =====================================================
 
         server.set_debuglevel(1)
-
-        # =====================================================
-        # EHLO
-        # =====================================================
-
-        current_app.logger.info(
-            "Sending EHLO..."
-        )
-
-        server.ehlo()
-
-        current_app.logger.info(
-            "EHLO successful."
-        )
-
-        # =====================================================
-        # STARTTLS
-        # =====================================================
-
-        if mail_use_tls:
-
-            current_app.logger.info(
-                "Starting TLS encryption..."
-            )
-
-            tls_context = ssl.create_default_context()
-
-            server.starttls(
-                context=tls_context
-            )
-
-            server.ehlo()
-
-            current_app.logger.info(
-                "TLS started successfully."
-            )
 
         # =====================================================
         # LOGIN
         # =====================================================
 
         current_app.logger.info(
-            "Logging into SMTP..."
+            "Logging into Gmail..."
         )
 
         server.login(
@@ -329,7 +221,7 @@ def send_email(to_email, subject, body):
         return True
 
     # =========================================================
-    # SMTP AUTH ERROR
+    # AUTH ERROR
     # =========================================================
 
     except smtplib.SMTPAuthenticationError as e:
@@ -340,16 +232,12 @@ def send_email(to_email, subject, body):
 
         current_app.logger.error(str(e))
 
-        current_app.logger.error(
-            "Check Gmail App Password."
-        )
-
         traceback.print_exc()
 
         return False
 
     # =========================================================
-    # SMTP CONNECT ERROR
+    # CONNECTION ERROR
     # =========================================================
 
     except smtplib.SMTPConnectError as e:
@@ -365,7 +253,7 @@ def send_email(to_email, subject, body):
         return False
 
     # =========================================================
-    # NETWORK ERROR
+    # SOCKET ERROR
     # =========================================================
 
     except socket.gaierror as e:
