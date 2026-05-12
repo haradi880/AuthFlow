@@ -1,190 +1,89 @@
 """
-Production Email Helper
+Email Helper - Sends emails for OTP verification and notifications.
 """
 
 import smtplib
-import ssl
-
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-
 from flask import current_app
 
 
 def send_email(to_email, subject, body):
-
+    """
+    Send an email using SMTP.
+    
+    Args:
+        to_email: Recipient email address
+        subject: Email subject
+        body: Plain text email body
+    """
     try:
-
-        # =====================================================
-        # LOAD CONFIG
-        # =====================================================
-
-        mail_server = current_app.config.get(
-            "MAIL_SERVER",
-            "smtp.gmail.com"
-        )
-
-        mail_port = int(
-            current_app.config.get(
-                "MAIL_PORT",
-                465
-            )
-        )
-
-        mail_username = current_app.config.get(
-            "MAIL_USERNAME"
-        )
-
-        mail_password = current_app.config.get(
-            "MAIL_PASSWORD"
-        )
-
-        mail_sender = current_app.config.get(
-            "MAIL_DEFAULT_SENDER",
-            mail_username
-        )
-
-        mail_use_ssl = current_app.config.get(
-            "MAIL_USE_SSL",
-            True
-        )
-
-        # =====================================================
-        # VALIDATION
-        # =====================================================
-
-        if not mail_username or not mail_password:
-
-            current_app.logger.error(
-                "Missing SMTP credentials."
-            )
-
+        # Get email settings from Flask config
+        sender = current_app.config['MAIL_DEFAULT_SENDER']
+        username = current_app.config['MAIL_USERNAME']
+        password = current_app.config['MAIL_PASSWORD']
+        if not username or not password:
+            current_app.logger.info("Email delivery skipped; SMTP credentials are not configured. To=%s Subject=%s Body=%s", to_email, subject, body)
             return False
-
-        # =====================================================
-        # CREATE EMAIL
-        # =====================================================
-
+        
+        # Create message
         msg = MIMEMultipart()
-
-        msg["From"] = f"AuthFlow <{mail_sender}>"
-        msg["To"] = to_email
-        msg["Subject"] = subject
-
-        msg.attach(
-            MIMEText(body, "plain")
-        )
-
-        current_app.logger.info(
-            f"Sending email to {to_email}"
-        )
-
-        # =====================================================
-        # SSL CONNECTION
-        # =====================================================
-
-        if mail_use_ssl:
-
-            context = ssl.create_default_context()
-
-            with smtplib.SMTP_SSL(
-                mail_server,
-                mail_port,
-                context=context,
-                timeout=20
-            ) as server:
-
-                server.login(
-                    mail_username,
-                    mail_password
-                )
-
-                server.send_message(msg)
-
-        # =====================================================
-        # TLS CONNECTION
-        # =====================================================
-
-        else:
-
-            with smtplib.SMTP(
-                mail_server,
-                587,
-                timeout=20
-            ) as server:
-
-                server.starttls()
-
-                server.login(
-                    mail_username,
-                    mail_password
-                )
-
-                server.send_message(msg)
-
-        current_app.logger.info(
-            "Email sent successfully."
-        )
-
+        msg['From'] = f"AuthFlow <{sender}>"
+        msg['To'] = to_email
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain'))
+        
+        # Connect to SMTP server and send
+        server = smtplib.SMTP(current_app.config['MAIL_SERVER'], 
+                              current_app.config['MAIL_PORT'],
+                             timeout=10
+                             )
+        server.starttls()
+        server.login(username, password)
+        server.send_message(msg)
+        server.quit()
+        
         return True
-
     except Exception as e:
-
-        current_app.logger.error(
-            f"Email sending failed: {str(e)}"
-        )
-
+        current_app.logger.warning("Failed to send email to %s: %s", to_email, e)
         return False
 
 
 def send_otp_email(email, otp):
-
+    """Send OTP verification code to user's email."""
     subject = "Your Verification Code - AuthFlow"
-
     body = f"""
 Hello!
 
-Your OTP code is:
+Your verification code is: {otp}
 
-{otp}
+This code will expire in 5 minutes.
 
-This code expires in 5 minutes.
+If you didn't request this code, please ignore this email.
 
-If this was not you,
-please ignore this email.
-
+Best regards,
 AuthFlow Team
 """
-
-    return send_email(
-        email,
-        subject,
-        body
-    )
+    return send_email(email, subject, body)
 
 
 def send_welcome_email(email, username):
-
-    subject = "Welcome to AuthFlow"
-
+    """Send welcome email to new users."""
+    subject = "Welcome to AuthFlow!"
     body = f"""
 Hello {username}!
 
-Welcome to AuthFlow.
+Welcome to AuthFlow - the developer blogging platform.
 
 You can now:
-- Publish blogs
-- Upload projects
-- Build your developer profile
-- Connect with developers
+- Write and publish blog posts
+- Share your projects
+- Follow other developers
+- Build your portfolio
 
-Start building today.
+Get started by writing your first blog post!
 
+Best regards,
 AuthFlow Team
 """
-
-    return send_email(
-        email,
-        subject,
-        body
-    )
+    return send_email(email, subject, body)
